@@ -1,97 +1,43 @@
 from docx import Document
-from docx.shared import RGBColor, Pt, Inches
+from docx.shared import RGBColor
+from docx.shared import Pt
+from docx.shared import Inches
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
-from docx.oxml import OxmlElement
-from docx.oxml.ns import qn
 
 from src.utils import limpiar_valor
 
 NO_RESPONDIDO = "(No respondido en el formulario)"
 
 
-# ==================================================
-# ESTILOS
-# ==================================================
-
 def configurar_estilos(doc):
 
-    estilos = [
-        "Normal",
-        "Heading 1",
-        "Heading 2",
-        "Heading 3"
-    ]
+    for nombre in ["Normal", "Heading 1", "Heading 2", "Heading 3"]:
 
-    for nombre_estilo in estilos:
+        estilo = doc.styles[nombre]
 
-        style = doc.styles[nombre_estilo]
+        estilo.font.name = "Aptos"
 
-        style.font.name = "Aptos"
-
-        if nombre_estilo == "Normal":
-            style.font.size = Pt(11)
-
-
-# ==================================================
-# TOC
-# ==================================================
-
-def insertar_toc(paragraph):
-
-    run = paragraph.add_run()
-
-    fld_begin = OxmlElement('w:fldChar')
-    fld_begin.set(qn('w:fldCharType'), 'begin')
-
-    instr = OxmlElement('w:instrText')
-    instr.set(qn('xml:space'), 'preserve')
-    instr.text = r'TOC \o "1-3" \h \z \u'
-
-    fld_separate = OxmlElement('w:fldChar')
-    fld_separate.set(qn('w:fldCharType'), 'separate')
-
-    text = OxmlElement('w:t')
-    text.text = "Actualice el índice al abrir el documento (Ctrl+A y F9)"
-
-    fld_separate.append(text)
-
-    fld_end = OxmlElement('w:fldChar')
-    fld_end.set(qn('w:fldCharType'), 'end')
-
-    run._r.append(fld_begin)
-    run._r.append(instr)
-    run._r.append(fld_separate)
-    run._r.append(fld_end)
-
-
-# ==================================================
-# ENCABEZADO
-# ==================================================
 
 def agregar_encabezado(doc):
 
-    seccion = doc.sections[0]
-
-    header = seccion.header
-
-    parrafo = header.paragraphs[0]
-
-    run = parrafo.add_run()
-
     try:
+
+        section = doc.sections[0]
+
+        header = section.header
+
+        p = header.paragraphs[0]
+
+        run = p.add_run()
 
         run.add_picture(
             "assets/ApoyoalaMejora.png",
-            width=Inches(1.5)
+            width=Inches(1.3)
         )
 
     except:
         pass
 
-
-# ==================================================
-# CAMPOS
-# ==================================================
 
 def agregar_campo(tabla, nombre, valor):
 
@@ -120,10 +66,6 @@ def agregar_campo(tabla, nombre, valor):
         p.add_run(str(valor))
 
 
-# ==================================================
-# GENERADOR
-# ==================================================
-
 def generar_word(df, salida):
 
     doc = Document()
@@ -131,10 +73,6 @@ def generar_word(df, salida):
     configurar_estilos(doc)
 
     agregar_encabezado(doc)
-
-    # =====================================
-    # DATOS PORTADA
-    # =====================================
 
     region = limpiar_valor(
         df.iloc[0]["Indique su región"]
@@ -152,27 +90,25 @@ def generar_word(df, salida):
         df.iloc[0]["Nombre"]
     )
 
-    # =====================================
-    # TITULO
-    # =====================================
-
     titulo = doc.add_paragraph()
 
     titulo.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
 
     run = titulo.add_run(
-        "INFORME INDIVIDUAL ETAPA DE PREPARACIÓN"
+        "Informe Individual Etapa De Preparación De La Asesoría"
     )
 
     run.bold = True
-    run.font.name = "Aptos"
     run.font.size = Pt(18)
+    run.font.name = "Aptos"
 
-    doc.add_paragraph("")
+    run.font.color.rgb = RGBColor(
+        0,
+        70,
+        140
+    )
 
-    # =====================================
-    # TABLA PORTADA
-    # =====================================
+    doc.add_paragraph()
 
     tabla_portada = doc.add_table(
         rows=4,
@@ -195,25 +131,6 @@ def generar_word(df, salida):
 
     doc.add_page_break()
 
-    # =====================================
-    # INDICE REAL WORD
-    # =====================================
-
-    doc.add_heading(
-        "Índice",
-        level=1
-    )
-
-    insertar_toc(
-        doc.add_paragraph()
-    )
-
-    doc.add_page_break()
-
-    # =====================================
-    # REGISTROS
-    # =====================================
-
     for _, row in df.iterrows():
 
         nombre_registro = limpiar_valor(
@@ -221,60 +138,43 @@ def generar_word(df, salida):
         )
 
         doc.add_heading(
-            f"Registro asociado a: {nombre_registro}",
+            f"Registro Asociado A: {nombre_registro}",
             level=1
         )
 
-        # ----------------------------------
-
-        doc.add_heading(
-            "Información General",
-            level=2
-        )
-
-        tabla = doc.add_table(
+        info = doc.add_table(
             rows=1,
             cols=2
         )
 
-        tabla.style = "Light Grid Accent 1"
+        info.style = "Table Grid"
 
-        cab = tabla.rows[0].cells
-
-        cab[0].text = "Campo"
-        cab[1].text = "Valor"
+        info.rows[0].cells[0].text = "Campo"
+        info.rows[0].cells[1].text = "Valor"
 
         agregar_campo(
-            tabla,
+            info,
             "Correo",
             row.get("Correo electrónico", "")
         )
 
         agregar_campo(
-            tabla,
-            "Nombre",
-            row.get("Nombre", "")
-        )
-
-        agregar_campo(
-            tabla,
+            info,
             "Supervisor",
             row.get("Supervisor", "")
         )
 
         agregar_campo(
-            tabla,
+            info,
             "Director",
             row.get("Nombre Director", "")
         )
 
         agregar_campo(
-            tabla,
+            info,
             "Tipo Asesoría",
             row.get("Tipo Asesoría", "")
         )
-
-        # ----------------------------------
 
         doc.add_heading(
             "Brechas Críticas Lectura",
@@ -290,8 +190,6 @@ def generar_word(df, salida):
             )
         )
 
-        # ----------------------------------
-
         doc.add_heading(
             "Brechas Críticas Matemática",
             level=2
@@ -305,8 +203,6 @@ def generar_word(df, salida):
                 )
             )
         )
-
-        # ----------------------------------
 
         doc.add_heading(
             "Hallazgos DIA",
@@ -322,8 +218,6 @@ def generar_word(df, salida):
             )
         )
 
-        # ----------------------------------
-
         doc.add_heading(
             "Fortalezas",
             level=2
@@ -338,10 +232,8 @@ def generar_word(df, salida):
             )
         )
 
-        # ----------------------------------
-
         doc.add_heading(
-            "Oportunidades de Mejora",
+            "Oportunidades De Mejora",
             level=2
         )
 
@@ -354,28 +246,24 @@ def generar_word(df, salida):
             )
         )
 
-        # ----------------------------------
-
         doc.add_heading(
             "PME",
             level=2
         )
 
-        tabla_pme = doc.add_table(
+        pme = doc.add_table(
             rows=1,
             cols=2
         )
 
-        tabla_pme.style = "Table Grid"
+        pme.style = "Table Grid"
 
-        cab = tabla_pme.rows[0].cells
-
-        cab[0].text = "Elemento"
-        cab[1].text = "Valor"
+        pme.rows[0].cells[0].text = "Elemento"
+        pme.rows[0].cells[1].text = "Valor"
 
         agregar_campo(
-            tabla_pme,
-            "Acciones Lenguaje",
+            pme,
+            "Lenguaje",
             row.get(
                 "El PME vigente contempla acciones específicas para el abordaje de la asignatura de lenguaje",
                 ""
@@ -383,7 +271,7 @@ def generar_word(df, salida):
         )
 
         agregar_campo(
-            tabla_pme,
+            pme,
             "Descripción Lenguaje",
             row.get(
                 "Indique una breve descripción de la acción",
@@ -392,8 +280,8 @@ def generar_word(df, salida):
         )
 
         agregar_campo(
-            tabla_pme,
-            "Acciones Matemática",
+            pme,
+            "Matemática",
             row.get(
                 "El PME vigente contempla acciones específicas para el abordaje de la asignatura de matemática",
                 ""
@@ -401,7 +289,7 @@ def generar_word(df, salida):
         )
 
         agregar_campo(
-            tabla_pme,
+            pme,
             "Descripción Matemática",
             row.get(
                 "Indique una breve descripción de la acción2",
@@ -410,7 +298,7 @@ def generar_word(df, salida):
         )
 
         agregar_campo(
-            tabla_pme,
+            pme,
             "Observaciones PME",
             row.get(
                 "Observaciones / Sugerencias de ajuste al PME",
