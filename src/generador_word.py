@@ -106,9 +106,9 @@ def generar_word(df, salida):
 
     for _, row in df.iterrows():
 
-        tipo = limpiar_valor(
+        tipo = str(
             row.get("Tipo Asesoría", "")
-        )
+        ).strip()
 
         if tipo == "Directa EE":
 

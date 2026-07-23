@@ -32,6 +32,14 @@ if archivo:
 
     st.write(df.columns.tolist())
 
+    st.subheader("Tipos detectados")
+
+    st.write(
+        df["Tipo Asesoría"]
+        .dropna()
+        .unique()
+    )
+
     total_registros = len(df)
 
     # Validación columnas obligatorias
