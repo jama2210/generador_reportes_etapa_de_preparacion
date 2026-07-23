@@ -1,10 +1,10 @@
 import tempfile
 
-import pandas as pd
 import streamlit as st
 
 from src.lector_excel import leer_excel
 from src.generador_zip import generar_zip
+
 
 st.set_page_config(
     page_title="Generador Informes MINEDUC",
@@ -21,20 +21,58 @@ archivo = st.file_uploader(
     type=["xlsx"]
 )
 
+# Solo procesar si existe archivo
 if archivo:
 
     df = leer_excel(archivo)
 
+    st.subheader("Diagnóstico")
+
+    st.write("Columnas detectadas:")
+
+    st.write(df.columns.tolist())
+
     total_registros = len(df)
+
+    # Validación columnas obligatorias
+    columnas_obligatorias = [
+        "Nombre",
+        "Indique su región",
+        "Deprov",
+        "Tipo Asesoría"
+    ]
+
+    faltantes = [
+        c for c in columnas_obligatorias
+        if c not in df.columns
+    ]
+
+    if faltantes:
+
+        st.error(
+            f"Faltan columnas requeridas: {', '.join(faltantes)}"
+        )
+
+        st.stop()
 
     total_asesores = df["Nombre"].nunique()
 
     total_directa = len(
-        df[df["Tipo Asesoría"] == "Directa EE"]
+        df[
+            df["Tipo Asesoría"]
+            .astype(str)
+            .str.strip()
+            == "Directa EE"
+        ]
     )
 
     total_red = len(
-        df[df["Tipo Asesoría"] == "Red EE"]
+        df[
+            df["Tipo Asesoría"]
+            .astype(str)
+            .str.strip()
+            == "Red EE"
+        ]
     )
 
     c1, c2, c3, c4 = st.columns(4)
@@ -75,12 +113,16 @@ if archivo:
     )
 
     st.subheader(
-        "Resumen de generación"
+        "Resumen De Generación"
     )
 
     st.dataframe(
         resumen,
         use_container_width=True
+    )
+
+    st.info(
+        f"Se generarán {len(resumen)} documentos Word y serán empaquetados en un archivo ZIP."
     )
 
     if st.button(
